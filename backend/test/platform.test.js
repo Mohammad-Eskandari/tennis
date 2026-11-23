@@ -217,3 +217,140 @@ test("password change invalidates every existing session", async () => {
   );
   assert.equal((await other.request("/auth/me")).data.user, null);
 });
+
+test("friend requests, authorization and persistent messages", async () => {
+  const c = client(),
+    d = client(),
+    stranger = client();
+  const create = async (c, name) =>
+    (
+      await c.request("/auth/register", {
+        method: "POST",
+        body: { username: name, password: "long-test-password-123" },
+      })
+    ).data.user;
+  const u = await create(c, "social_one"),
+    v = await create(d, "social_two");
+  await create(stranger, "social_stranger");
+  assert.equal(
+    (
+      await c.request("/messages/" + v.id, {
+        method: "POST",
+        body: { body: "Before friendship" },
+      })
+    ).status,
+    403,
+  );
+  const f = await c.request("/friends", {
+    method: "POST",
+    body: { userId: v.id },
+  });
+  assert.equal(f.status, 201);
+  assert.equal(
+    (
+      await stranger.request("/friends/" + f.data.friendship.id, {
+        method: "PATCH",
+        body: { action: "accept" },
+      })
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await d.request("/friends/" + f.data.friendship.id, {
+        method: "PATCH",
+        body: { action: "accept" },
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await c.request("/messages/" + v.id, {
+        method: "POST",
+        body: { body: "Ready for tennis?" },
+      })
+    ).status,
+    201,
+  );
+  assert.equal(
+    (await d.request("/messages/" + u.id)).data.messages[0].body,
+    "Ready for tennis?",
+  );
+  assert.equal(
+    (await a.db.query("SELECT count(*)::int AS n FROM messages")).rows[0].n,
+    1,
+  );
+  assert.equal(
+    (await c.request("/friends")).data.friends[0].status,
+    "ACCEPTED",
+  );
+});
+
+test("admin APIs enforce roles, suspension revokes sessions, and backup restoration is transactional", async () => {
+  const admin = client(),
+    player = client();
+  const register = async (c, name) =>
+    (
+      await c.request("/auth/register", {
+        method: "POST",
+        body: { username: name, password: "long-test-password-123" },
+      })
+    ).data.user;
+  const u = await register(admin, "admin_test"),
+    v = await register(player, "suspend_me");
+  assert.equal((await player.request("/admin/users")).status, 403);
+  await a.db.query("UPDATE users SET role='ADMIN' WHERE id=$1", [u.id]);
+  assert.equal((await admin.request("/admin/users")).status, 200);
+  assert.equal(
+    (
+      await admin.request("/admin/users/" + v.id, {
+        method: "PATCH",
+        body: { disabled: true },
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await player.request("/auth/me")).data.user, null);
+  const backup = (await admin.request("/admin/backup")).data;
+  assert.equal(backup.format, "baseline-v1");
+  assert.equal(
+    (
+      await admin.request("/admin/restore", {
+        method: "POST",
+        body: { confirm: "NO", backup },
+      })
+    ).status,
+    400,
+  );
+  const bad = structuredClone(backup);
+  bad.data.friendships.push({ id: "invalid" });
+  assert.equal(
+    (
+      await admin.request("/admin/restore", {
+        method: "POST",
+        body: { confirm: "RESTORE", backup: bad },
+      })
+    ).status,
+    500,
+  );
+  assert.equal((await admin.request("/auth/me")).data.user.id, u.id);
+  assert.equal(
+    (
+      await admin.request("/admin/restore", {
+        method: "POST",
+        body: { confirm: "RESTORE", backup },
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await admin.request("/auth/me")).data.user, null);
+  assert.equal(
+    (
+      await a.db.query(
+        "SELECT count(*)::int AS n FROM audit_events WHERE action='database.restore'",
+      )
+    ).rows[0].n,
+    1,
+  );
+});

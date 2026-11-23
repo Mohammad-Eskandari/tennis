@@ -79,3 +79,32 @@ button:disabled {
   opacity: 0.55;
   cursor: wait;
 }
+.club-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #ffffff20;
+  font-size: 14px;
+}
+.club-person > span:first-child {
+  flex: 1;
+  min-width: 160px;
+}
+.club-person .secondary {
+  width: auto;
+  padding: 7px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.club-messages {
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  background: #0e2026;
+  border-radius: 6px;
+}
+.club-messages p {
+  margin: 5px 0;
+}

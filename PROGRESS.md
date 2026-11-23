@@ -51,3 +51,8 @@ A/D now use the rendered camera projection of the court-width axis; W/S remain n
 ## Milestone B: backend foundation
 
 Implemented backend/src config, database, security, accounts and server modules; versioned schema; local PostgreSQL helper; migration/admin commands; account/profile/avatar/password/rankings/history clubhouse UI and Vite API proxy. Five integration tests pass against real PostgreSQL, covering migration idempotence, authentication, session expiry/revocation, CSRF/origin rejection, persistence, duplicates and avatar decoding. Manual browser QA remains unavailable. Social/admin/online match behavior is next.
+
+## Milestone C: administration and social
+
+Added social.js and admin.js APIs; friends/request decisions/removal, accepted-friend messaging, user search/roles/suspension, health counts, audit log, JSON database export and transactional restore. Added working clubhouse screens for these APIs. Seven real-PostgreSQL tests pass, including unauthorized access, friend authorization, suspension/session revocation, and failed/successful restore. Production build passes. Presence currently requires the upcoming socket service; browser QA remains blocked. Backup exports contain password hashes and personal data and must be stored privately. Restore requires RESTORE confirmation, retains the active admin, rejects active matches, and signs out all sessions; it is a single-server maintenance tool.
+

@@ -8,6 +8,8 @@ import { configuration } from "./config.js";
 import { database } from "./db.js";
 import { security } from "./security.js";
 import { accounts } from "./accounts.js";
+import { social } from "./social.js";
+import { administration } from "./admin.js";
 export async function createApplication(options = {}) {
   const config = configuration(options),
     db = await database(config);
@@ -62,7 +64,17 @@ export async function createApplication(options = {}) {
     res.set("Cache-Control", "no-store");
     next();
   });
-  app.use(express.json({ limit: "64kb" }), cookieParser());
+  const smallJson = express.json({ limit: "64kb" }),
+    restoreJson = express.json({ limit: "20mb" });
+  app.use(
+    (req, res, next) =>
+      (req.path === "/api/admin/restore" ? restoreJson : smallJson)(
+        req,
+        res,
+        next,
+      ),
+    cookieParser(),
+  );
   app.use("/api", async (req, res, next) => {
     req.user = await sec.sessionFor(req.cookies[sec.cookie]);
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
@@ -80,6 +92,8 @@ export async function createApplication(options = {}) {
     res.json({ ok: true });
   });
   app.use("/api", accounts(db, sec));
+  app.use("/api", social(db, sec));
+  app.use("/api/admin", administration(db, sec));
   app.use("/api", (req, res) =>
     res.status(404).json({ error: "Endpoint not found" }),
   );
@@ -98,16 +112,14 @@ export async function createApplication(options = {}) {
         ? 409
         : e.status || (e.code === "LIMIT_FILE_SIZE" ? 413 : 500);
     if (status === 500) console.error("Request failed:", e.code || e.name);
-    res
-      .status(status)
-      .json({
-        error:
-          status === 500
-            ? "Internal server error"
-            : e.code === "23505"
-              ? "Already exists"
-              : e.message,
-      });
+    res.status(status).json({
+      error:
+        status === 500
+          ? "Internal server error"
+          : e.code === "23505"
+            ? "Already exists"
+            : e.message,
+    });
   });
   return {
     app,
