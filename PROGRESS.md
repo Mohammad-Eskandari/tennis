@@ -12,6 +12,7 @@
 | 9cef07f | Authoritative online tennis, prediction, rooms/invitations and Elo |
 | d9e4b15 | Pool-style Worker/D1/R2 platform and encrypted hosted recovery |
 | 0ad0956 | Stable single-URL development startup with Vite |
+| a8008e8 | Persisted account preferences and hosted in-match presence |
 
 GitHub main has not been pushed or merged. Master_Prompt.txt remains untouched/untracked.
 
@@ -41,7 +42,7 @@ Private Site registration/configuration is complete. Creation is not deployment 
 
 Sites confirmed a successful private publication at https://baseline-tennis-club.violetscout4.chatgpt.site (deployment appgdep_6b03f82f9b20819191fabfe94b4b5686, runtime environment revision 1). Production Worker error logs showed only missing favicon requests, with no application exceptions in that inspected window. Direct command-line page/health requests returned HTTP 403 before application verification; browser automation remains blocked. Consequently, cloud account/gameplay behavior is not claimed verified. Publication success and local Worker integration results are distinct checks.
 
-Account preferences are now editable and persisted through the profile UI, and hosted presence refreshes during active play. Final source is published as a subsequent version; its actual deployment result is recorded at handoff.
+Account preferences are now editable and persisted through the profile UI, and hosted presence refreshes during active play. Final publication succeeded as deployment appgdep_6b03f9296f14819181af16ba975af347, saved version 2, with runtime environment revision 1. It uses Sites source commit ddf363a301ca8ef3d9a80c51bd939d6927a6bd0f, exported from GitHub develop commit a8008e8. The release archive and encrypted secret recovery stay under ignored .runtime. The original GitHub main branch is untouched.
 
 ## Run/check
 

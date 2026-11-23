@@ -11,6 +11,8 @@ Like the pool reference, there are two deployments:
 
 Both use the same tennis simulation. Their databases, account hashes and backups are separate.
 
+Private deployment: https://baseline-tennis-club.violetscout4.chatgpt.site. Sites confirmed publication; browser/cloud gameplay verification remains subject to the limits below.
+
 ## Start locally
 
 Requires Node 24 and PostgreSQL 18.
