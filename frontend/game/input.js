@@ -26,15 +26,19 @@ export class Input {
     window.addEventListener("keyup", this.up);
     window.addEventListener("blur", this.clear);
   }
-  read() {
+  read(side = -1) {
     const k = this.keys;
+    // Facing the net: forward and right reverse at the opposite baseline.
+    // Convert human intent to world axes here; camera orientation is irrelevant.
+    const forward =
+      Number(k.has("KeyW") || k.has("ArrowUp")) -
+      Number(k.has("KeyS") || k.has("ArrowDown"));
+    const right =
+      Number(k.has("KeyD") || k.has("ArrowRight")) -
+      Number(k.has("KeyA") || k.has("ArrowLeft"));
     return {
-      x:
-        Number(k.has("KeyW") || k.has("ArrowUp")) -
-        Number(k.has("KeyS") || k.has("ArrowDown")),
-      z:
-        Number(k.has("KeyD") || k.has("ArrowRight")) -
-        Number(k.has("KeyA") || k.has("ArrowLeft")),
+      x: right * -side || 0,
+      z: forward * -side || 0,
       sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
       swing: k.has("Space") || k.has("KeyJ") || k.has("KeyK") || k.has("KeyL"),
       shot: this.shot,

@@ -19,6 +19,8 @@ const icons = {
 };
 const icon = (n) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[n]}</svg>`;
+const movementGuide = () =>
+  `<div class="control-list" aria-label="Movement controls"><span><kbd>W / UP</kbd> Forward · toward the net</span><span><kbd>S / DOWN</kbd> Backward · toward the baseline</span><span><kbd>A / LEFT</kbd> Strafe left</span><span><kbd>D / RIGHT</kbd> Strafe right</span></div><p class="muted">Directions follow your position facing the net, in every camera mode and after changing ends. Combine keys to move diagonally. Hold Shift to sprint.</p>`;
 document.querySelector("#app").innerHTML = `
  <header><a class="brand" href="./">${icon("ball")}<span>baseline<span class="brand-dot">.</span></span></a><nav aria-label="Main"><button class="nav-active" id="play-nav">The court</button><button id="how-nav">How to play</button><button id="settings-nav">Settings</button></nav><span class="edition">TENNIS, REIMAGINED</span><button class="avatar" id="profile" aria-label="View local player stats">YOU</button></header>
  <main><canvas id="court" aria-label="3D tennis court" tabindex="0"></canvas><div class="vignette"></div>
@@ -103,7 +105,7 @@ $("dialog").addEventListener("cancel", (e) => {
 });
 function how() {
   showDialog(
-    `<h2>Find your rhythm.</h2><p>You play from the left end in Broadcast view. Move into the ball's path, then hold a shot key to swing as it enters racket reach.</p><div class="control-list"><span><kbd>W / S</kbd> Across the court</span><span><kbd>A / D</kbd> Baseline / net</span><span><kbd>SPACE / J</kbd> Flat shot / serve</span><span><kbd>K / L</kbd> Topspin / slice</span><span><kbd>Q / E</kbd> Aim left / right</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>C</kbd> Cycle camera</span><span><kbd>ESC</kbd> Pause / resume</span></div><p class="muted">Get within 2.15 m of the ball. A serve must bounce before a return. Quick matches play to 3 games with a two-game margin and a tie-break at 3–3. Other formats play 6-game sets.</p>`,
+    `<h2>Find your rhythm.</h2><p>Move into the ball's path, then hold a shot key to swing as it enters racket reach.</p>${movementGuide()}<div class="control-list"><span><kbd>SPACE / J</kbd> Flat shot / serve</span><span><kbd>K / L</kbd> Topspin / slice</span><span><kbd>Q / E</kbd> Aim left / right</span><span><kbd>C</kbd> Cycle camera</span><span><kbd>ESC</kbd> Pause / resume</span></div><p class="muted">Get within 2.15 m of the ball. A serve must bounce before a return. Quick matches play to 3 games with a two-game margin and a tie-break at 3–3. Other formats play 6-game sets.</p>`,
     "THE PLAYBOOK",
   );
 }
@@ -111,7 +113,7 @@ $("how-nav").onclick = how;
 $("controls").onclick = how;
 function settings() {
   showDialog(
-    `<h2>Make it your court.</h2><label class="setting">Court surface<select id="surface"><option value="hard">Hard court</option><option value="clay">Clay</option><option value="grass">Grass</option></select></label><label class="setting">Graphics<select id="quality"><option value="high">High · soft shadows</option><option value="low">Low · performance</option></select></label><label class="setting">Effects volume<input id="volume" type="range" min="0" max="1" step=".05" value="${audio.volume}"></label><p class="muted">Surface changes apply to your next session. Settings are saved on this device.</p>`,
+    `<h2>Make it your court.</h2><label class="setting">Court surface<select id="surface"><option value="hard">Hard court</option><option value="clay">Clay</option><option value="grass">Grass</option></select></label><label class="setting">Graphics<select id="quality"><option value="high">High · soft shadows</option><option value="low">Low · performance</option></select></label><label class="setting">Effects volume<input id="volume" type="range" min="0" max="1" step=".05" value="${audio.volume}"></label><p class="muted">Surface changes apply to your next session. Settings are saved on this device.</p><h3>Movement controls</h3>${movementGuide()}`,
     "PREFERENCES",
   );
   $("surface").value = saved.surface || "hard";
@@ -273,7 +275,7 @@ function frame(now) {
   while (acc >= STEP) {
     Object.assign(previous.ball, state.ball);
     state.players.forEach((p, i) => Object.assign(previous.players[i], p));
-    if (active) stepMatch(state, input.read());
+    if (active) stepMatch(state, input.read(state.players[0].side));
     else {
       state.time += STEP;
       state.events = [];

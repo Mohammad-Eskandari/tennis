@@ -23,19 +23,21 @@ The build produces `dist/`. The preview command serves the production build loca
 
 ## Controls
 
-| Key                   | Action                                            |
-| --------------------- | ------------------------------------------------- |
-| W / S or Up / Down    | Across the court                                  |
-| A / D or Left / Right | Toward baseline / net for the near player         |
-| Space / J             | Flat swing or serve                               |
-| K                     | Topspin                                           |
-| L                     | Slice                                             |
-| Shift                 | Sprint                                            |
-| Q / E                 | Aim toward either sideline                        |
-| C                     | Cycle broadcast side, dynamic side, behind-player |
-| Escape                | Pause/resume                                      |
+| Key       | Action                                            |
+| --------- | ------------------------------------------------- |
+| W / Up    | Forward, toward the net                           |
+| S / Down  | Backward, toward the baseline                     |
+| A / Left  | Strafe left, facing the net                       |
+| D / Right | Strafe right, facing the net                      |
+| Space / J | Flat swing or serve                               |
+| K         | Topspin                                           |
+| L         | Slice                                             |
+| Shift     | Sprint                                            |
+| Q / E     | Aim toward either sideline                        |
+| C         | Cycle broadcast side, dynamic side, behind-player |
+| Escape    | Pause/resume                                      |
 
-Move close to the incoming ball and hold a stroke key through the contact window. Serves must bounce before returning. Controls remain relative to the court when the camera changes. Touch gameplay and gamepads are not implemented.
+Move close to the incoming ball and hold a stroke key through the contact window. Serves must bounce before returning. Movement is relative to your end of the court, facing the net, in all three camera modes. Directions automatically reverse world axes when your player changes sides, so W still approaches the net. Combine W/S with A/D for diagonal movement; diagonal speed is normalized, including while sprinting. Touch gameplay and gamepads are not implemented.
 
 ## Modes and settings
 

@@ -1,5 +1,13 @@
 # Milestone progress
 
+## Court-relative movement update
+
+- W/Up moves toward the net; S/Down moves toward the baseline. A/Left and D/Right strafe as the player faces the net.
+- The input layer maps both axes using the controlled player's current side on each simulation tick, without reading the camera. Existing world-space AI inputs and movement/animation systems are unchanged.
+- Diagonal normalization, acceleration/deceleration, sprint, shot selection and aiming retain the existing simulation behavior. The controls guide, settings dialog and README show the new mapping.
+- `npm test`: 42 tests passed (29 existing and 13 new). Added real keyboard-handler/simulation coverage for every cardinal key and arrow alias at both ends, held-key side changes, all four diagonals at normal/sprint speed, camera independence across all three camera rigs, smooth acceleration/release, opposite-key cancellation, shot/aim compatibility and focus-loss cleanup.
+- `npm run build`: passed. No new dependencies. Physical end-change rules remain outside this control-only change; the mapping already handles a changed player side.
+
 ## Delivered
 
 - Phase 0: separate project, pool repository inspected, architecture documented, dependency lockfile and runnable development/build scripts.
