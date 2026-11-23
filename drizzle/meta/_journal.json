@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1793805630468,
+      "tag": "0000_moaning_next_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793806157763,
+      "tag": "0001_true_starjammers",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793806171038,
+      "tag": "0002_shallow_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793806311448,
+      "tag": "0003_luxuriant_karma",
+      "breakpoints": true
+    }
+  ]
+}

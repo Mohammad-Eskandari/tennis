@@ -1,9 +1,11 @@
 import { api, escapeHtml as esc } from "./api.js";
 import { io } from "socket.io-client";
+import { sitesTransport } from "./sites-transport.js";
 export function createClubhouse(openDialog, onOnline = () => {}) {
   let socket = null,
     room = null,
-    playingRoom = null;
+    playingRoom = null,
+    platformConfig = { transport: "socket.io" };
   function connect() {
     if (socket?.auth.csrf === user.csrf) {
       if (!socket.connected) socket.connect();
@@ -12,7 +14,10 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
     if (socket) {
       socket.disconnect();
     }
-    socket = io({ auth: { csrf: user.csrf }, withCredentials: true });
+    socket =
+      platformConfig.transport === "sites-poll"
+        ? sitesTransport({ csrf: user.csrf })
+        : io({ auth: { csrf: user.csrf }, withCredentials: true });
     socket.on("match:state", (r) => {
       if (!room || r.id !== room.id) return;
       room = r;
@@ -42,6 +47,28 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
     adminPage = 0,
     adminSearch = "";
   const root = () => document.getElementById("dialog-content");
+  // Refresh only conversation contents, preserving the user's draft and focus.
+  setInterval(() => {
+    if (
+      page === "social" &&
+      chatId &&
+      user &&
+      document.getElementById("dialog").open &&
+      document.querySelector(".club-messages")
+    )
+      api("/messages/" + chatId)
+        .then((d) => {
+          const box = document.querySelector(".club-messages");
+          if (box)
+            box.innerHTML = d.messages
+              .map(
+                (m) =>
+                  `<p><strong>${m.sender === user.id ? "You" : "Friend"}</strong> ${esc(m.body)}</p>`,
+              )
+              .join("");
+        })
+        .catch(() => {});
+  }, 1500);
   const tabs = () =>
     `<nav class="club-tabs" aria-label="Clubhouse"><button data-page="overview">Overview</button><button data-page="online">Play online</button><button data-page="profile">Profile</button><button data-page="social">Friends & messages</button><button data-page="leaderboard">Rankings</button><button data-page="history">History</button>${user?.role === "ADMIN" ? '<button data-page="admin">Administration</button>' : ""}<button data-action="logout">Sign out</button></nav>`;
   const formField = (name, label, value = "", type = "text") =>
@@ -120,7 +147,7 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
         api("/admin/audit"),
       ]);
       shell(
-        `<h2>Club administration.</h2><p>${h.counts.users} accounts · ${h.counts.matches} matches · uptime ${h.uptime}s</p><form id="club-admin-search">${formField("q", "Search usernames", adminSearch)}<button class="secondary">Search</button></form>${d.users.map((u) => `<div class="club-person"><span>${esc(u.username)} · ${u.role} · ${u.disabled ? "Suspended" : "Active"} · ${u.rating}</span>${u.id !== user.id ? `<button class="secondary" data-suspend="${u.id}" data-disabled="${!u.disabled}">${u.disabled ? "Reactivate" : "Suspend"}</button><button class="secondary" data-role="${u.id}" data-value="${u.role === "PLAYER" ? "ADMIN" : "PLAYER"}">Make ${u.role === "PLAYER" ? "admin" : "player"}</button>` : ""}</div>`).join("")}<p>Page ${adminPage + 1} · ${d.total} accounts</p><button class="secondary" data-admin-page="${Math.max(0, adminPage - 1)}">Previous page</button><button class="secondary" data-admin-page="${adminPage + 1}">Next page</button><h3>Database management</h3><button class="secondary" id="club-backup">Download database backup</button><form id="club-restore"><label class="club-field">Backup file<input name="backup" type="file" accept="application/json" required></label>${formField("confirm", "Type RESTORE to replace data and sign everyone out")}<button class="secondary">Restore database</button></form><h3>Audit log</h3>${table(
+        `<h2>Club administration.</h2><p>${h.counts.users} accounts · ${h.counts.matches} matches · uptime ${h.uptime}s</p><form id="club-admin-search">${formField("q", "Search usernames", adminSearch)}<button class="secondary">Search</button></form>${d.users.map((u) => `<div class="club-person"><span>${esc(u.username)} · ${u.role} · ${u.disabled ? "Suspended" : "Active"} · ${u.rating}</span>${u.id !== user.id ? `<button class="secondary" data-suspend="${u.id}" data-disabled="${!u.disabled}">${u.disabled ? "Reactivate" : "Suspend"}</button><button class="secondary" data-role="${u.id}" data-value="${u.role === "PLAYER" ? "ADMIN" : "PLAYER"}">Make ${u.role === "PLAYER" ? "admin" : "player"}</button>` : ""}</div>`).join("")}<p>Page ${adminPage + 1} · ${d.total} accounts</p><button class="secondary" data-admin-page="${Math.max(0, adminPage - 1)}">Previous page</button><button class="secondary" data-admin-page="${adminPage + 1}">Next page</button>${platformConfig.transport === "sites-poll" ? `<h3>Database management</h3><button class="secondary" id="club-native-backup">Create and download encrypted backup</button><form id="club-native-import"><label class="club-field">Sites backup (.tennis.enc)<input name="backup" type="file" accept=".enc" required></label><button class="secondary">Validate backup</button></form><div id="club-native-preview"></div>` : `<h3>Database management</h3><button class="secondary" id="club-backup">Download database backup</button><form id="club-restore"><label class="club-field">Backup file<input name="backup" type="file" accept="application/json" required></label>${formField("confirm", "Type RESTORE to replace data and sign everyone out")}<button class="secondary">Restore database</button></form>`}<h3>Audit log</h3>${table(
           audit.events.map((e) => [
             e.action,
             new Date(e.created_at).toLocaleString(),
@@ -183,6 +210,27 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
     }
   }
   function bind() {
+    document
+      .getElementById("club-native-backup")
+      ?.addEventListener("click", () =>
+        guarded(async () => {
+          const data = await api("/admin/database/backups", {
+            method: "POST",
+            body: {},
+          });
+          const res = await fetch(
+            "/api/admin/database/backups/" + data.backup.id + "/download",
+            { credentials: "same-origin" },
+          );
+          if (!res.ok) throw new Error("Backup download failed");
+          const url = URL.createObjectURL(await res.blob()),
+            a = document.createElement("a");
+          a.href = url;
+          a.download = data.backup.filename;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }),
+      );
     const create = async (path, body = {}) => {
       const d = await api(path, { method: "POST", body });
       watch(d.room);
@@ -358,6 +406,30 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
           });
         };
     };
+    submit("club-native-import", async (f) => {
+      const data = await api("/admin/database/imports", {
+        method: "POST",
+        form: f,
+      });
+      document.getElementById("club-native-preview").innerHTML =
+        `<p>Validated backup from ${esc(data.manifest.createdAt)}. ${esc(JSON.stringify(data.manifest.counts))}</p><form id="club-native-restore">${formField("password", "Administrator password", "", "password")}${formField("confirmation", "Type RESTORE BACKUP")}<button class="secondary">Confirm restore and sign everyone out</button></form>`;
+      const form = document.getElementById("club-native-restore");
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        guarded(async () => {
+          await api("/admin/database/restore", {
+            method: "POST",
+            body: {
+              ticket: data.ticket,
+              ...Object.fromEntries(new FormData(form)),
+            },
+          });
+          socket?.disconnect();
+          user = null;
+          await render();
+        });
+      };
+    });
     submit("club-auth", async (f) => {
       const d = await api("/auth/" + authMode, {
         method: "POST",
@@ -458,6 +530,7 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
       "THE CLUBHOUSE",
     );
     await guarded(async () => {
+      platformConfig = await api("/config");
       user = (await api("/auth/me")).user;
       if (user) connect();
       await render();

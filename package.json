@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "node --watch scripts/dev.mjs",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.js",
@@ -14,15 +14,22 @@
     "db:stop": "node scripts/local-db.mjs stop",
     "db:migrate": "node scripts/migrate.mjs",
     "admin:grant": "node scripts/grant-admin.mjs",
-    "test:backend": "node --test backend/test/*.test.js"
+    "test:backend": "node --test backend/test/*.test.js",
+    "build:site": "vite build && node scripts/build-hosted.mjs",
+    "test:hosted": "node --test hosted/test/*.test.mjs",
+    "db:generate:site": "drizzle-kit generate",
+    "dev:client": "vite --host 127.0.0.1"
   },
   "dependencies": {
+    "@noble/hashes": "2.0.1",
     "argon2": "0.45.2",
     "cookie-parser": "1.4.7",
     "dotenv": "18.0.10",
     "express": "5.3.0",
     "express-rate-limit": "8.7.5",
+    "fast-png": "6.4.0",
     "helmet": "8.3.0",
+    "jpeg-js": "0.4.4",
     "multer": "2.5.0",
     "pg": "8.23.1",
     "sharp": "0.35.5",
@@ -31,6 +38,9 @@
     "three": "0.160.0"
   },
   "devDependencies": {
+    "drizzle-kit": "0.31.10",
+    "drizzle-orm": "0.45.2",
+    "esbuild": "0.25.12",
     "vite": "6.4.5"
   },
   "engines": {

@@ -1,71 +1,73 @@
 # Baseline Tennis
 
-A browser-based 3D tennis game built with Three.js, Vite and vanilla JavaScript. This release is a local playable milestone: a full court/stadium, movement and rally simulation, practice, AI matches, scoring, three cameras and saved device settings. The broader online platform is still planned.
+Three.js tennis with accounts, profiles, avatars, friends/messages, casual rooms, invitations, ranked matchmaking, persistent history, leaderboards and administration.
 
-## Run locally
+Like the pool reference, there are two deployments:
 
-Requires Node.js 22+ and npm. Node 24.16.0 was used for verification.
+| Environment   | Backend/storage           | Transport                                       |
+| ------------- | ------------------------- | ----------------------------------------------- |
+| Native/local  | Node, Express, PostgreSQL | Socket.IO                                       |
+| ChatGPT Sites | Worker, D1, R2            | Polling with persisted authoritative simulation |
 
-```sh
+Both use the same tennis simulation. Their databases, account hashes and backups are separate.
+
+## Start locally
+
+Requires Node 24 and PostgreSQL 18.
+
+```powershell
 npm ci
-npm run dev -- --port 5173
+npm run db:local
+npm run db:migrate
+npm run dev
 ```
 
-Open http://127.0.0.1:5173/ and choose **Step onto the court**. A WebGL-capable browser with hardware acceleration is required.
+Open **http://127.0.0.1:3001/**. One development server serves the frontend, API and Socket.IO, with Vite middleware. Use **Clubhouse** to register/sign in, or play practice/AI without an account.
 
-```sh
-npm test
-npm run build
-npm run preview -- --port 4173
-```
+The helper creates an isolated cluster under ignored .runtime/postgres on loopback port 55432, with a non-superuser application role. Existing PostgreSQL and pool data are untouched. Set PG_BIN for another binary directory, or configure .env from .env.example for your own database. Stop this project's cluster with npm run db:stop. Never delete runtime data to restart it.
 
-The build produces `dist/`. The preview command serves the production build locally at http://127.0.0.1:4173/. No hosting publication has been configured.
+Native production: npm run build, then npm start. Configure NODE_ENV=production, exact HTTPS APP_ORIGINS, TLS/WebSocket forwarding and a trusted reverse proxy. Run one Node instance per database. Separate development commands remain available as dev:client and dev:server.
 
 ## Controls
 
-| Key       | Action                                            |
-| --------- | ------------------------------------------------- |
-| W / Up    | Forward, toward the net                           |
-| S / Down  | Backward, toward the baseline                     |
-| A / Left  | Strafe left on screen                             |
-| D / Right | Strafe right on screen                            |
-| Space / J | Flat swing or serve                               |
-| K         | Topspin                                           |
-| L         | Slice                                             |
-| Shift     | Sprint                                            |
-| Q / E     | Aim toward either sideline                        |
-| C         | Cycle broadcast side, dynamic side, behind-player |
-| Escape    | Pause/resume                                      |
+| Key       | Action                                 |
+| --------- | -------------------------------------- |
+| W / Up    | Toward the net                         |
+| S / Down  | Away from the net                      |
+| A / Left  | Strafe visibly left along court width  |
+| D / Right | Strafe visibly right along court width |
+| Space / J | Serve / flat                           |
+| K / L     | Topspin / slice                        |
+| Shift     | Sprint                                 |
+| Q / E     | Aim                                    |
+| C         | Cycle three cameras                    |
+| Escape    | Menu; pauses local games               |
 
-Move close to the incoming ball and hold a stroke key through the contact window. Serves must bounce before returning. W/S follow your end of the court, so W always approaches the net. A/D follow visible left/right along the court width in all three cameras, including after switching ends. Combine W/S with A/D for diagonal movement; diagonal speed is normalized, including while sprinting. Touch gameplay and gamepads are not implemented.
+A/D follow the rendered view; W/S follow the current court end. Diagonals are normalized, including sprint. Hold a shot key within racket reach. Online play continues while menus are open; leaving forfeits an active match.
 
-## Modes and settings
+Practice is unscored. AI supports three difficulties, quick matches, single sets and best-of-three. Quick uses 3-game sets with a tie-break at 3–3; standard uses 6-game sets and 6–6. Games/sets/tie-breaks require the appropriate two-point/game margin.
 
-- **Match vs AI:** beginner, intermediate or advanced; quick match, single set or best of three.
-- **Practice rally:** unscored rallies with AI; you serve each point.
-- **Surfaces:** hard, clay and grass, with different restitution/friction. Select under Settings before starting a session.
-- **Graphics:** high with soft shadows or low with reduced pixel ratio and no shadows.
-- **Sound:** synthesized impact tones, volume slider and mute. Audio activates on user interaction.
-- **Local profile:** completed matches, wins and best completed-match rally stored on this device. No account is needed.
+## Accounts and administration
 
-Quick matches play to three games with a two-game margin and a seven-point tie-break at 3–3. Standard sets use six games and a tie-break at 6–6. All tie-breaks require a two-point margin.
+Passwords require 12–128 characters; sessions expire after seven days. HTTP and socket mutations validate authentication, origins, CSRF and permissions.
 
-## Architecture and status
+For a native admin: register normally, then run npm run admin:grant -- username. No default native password is shipped.
 
-Pure shared modules own simulation, AI, court dimensions and tennis scoring. Presentation, keyboard input, procedural characters, camera and audio are separate frontend modules. See [ARCHITECTURE.md](ARCHITECTURE.md) for reference findings and implementation decisions, and [PROGRESS.md](PROGRESS.md) for measured checks and limitations.
+Sites bootstraps admin with a generated runtime secret. See [deployment/recovery](docs/DEPLOYMENT.md). Actual credentials are ignored and never committed.
 
-No database is required for this milestone. PostgreSQL migrations, Express APIs, authenticated Socket.IO, online rooms, ranked persistence, local two-player and social/admin screens have not been implemented. Do not connect this application to the pool database. The pool reference lives in ignored `.reference/pool` and is unchanged.
+Native backups are private JSON with transactional restore. Sites uses AES-GCM encrypted .tennis.enc packages, preview/password confirmation, safety backups, staged generations and R2 avatars. The formats are incompatible.
 
-## Clubhouse backend (Milestone B)
+Ranked matching uses a 300-point window and Elo K=24 (equal-rated result: ±12). Only authoritative online results update persistent rankings. Local results remain on the device.
 
-The Node/Express backend now provides PostgreSQL-backed registration, login/logout, expiring sessions, profiles, validated avatars, account settings, password changes, rankings and match-history queries. Use the Clubhouse navigation to sign in. Match results are populated by later authoritative multiplayer integration; local AI results remain device-local.
+## Verification
 
-On Windows with PostgreSQL 18 installed: run
-pm run db:local to create an isolated cluster on port 55432 and generate ignored local configuration. Other systems: copy .env.example to .env and configure your own PostgreSQL database. Then run
-pm run db:migrate,
-pm run dev:server and
-pm run dev in separate terminals. Run
-pm run test:backend for integration tests against temporary schemas. Run
-pm run admin:grant -- username to promote an existing registered account. Production uses
-pm run build then
-pm start; configure HTTPS and APP_ORIGINS.
+```powershell
+npm test
+npm run test:backend
+npm run build:site
+npm run test:hosted
+```
+
+Backend integration tests need PostgreSQL and use temporary schemas. Hosted tests run the actual Worker against SQLite through a D1 interface and private R2 fixtures. Maintain hosted migrations with npm run db:generate:site.
+
+See [architecture](ARCHITECTURE.md) and [progress](PROGRESS.md). Browser automation is currently blocked; visual controls, real browser flows and cloud latency remain unverified. Procedural animation/contact refinement and release playtesting remain.

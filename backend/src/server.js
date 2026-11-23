@@ -93,6 +93,13 @@ export async function createApplication(options = {}) {
     await db.query("SELECT 1");
     res.json({ ok: true });
   });
+  app.get("/api/config", (req, res) =>
+    res.json({
+      transport: "socket.io",
+      avatarFormats: ["image/png", "image/jpeg", "image/webp"],
+      backupFormat: ".json",
+    }),
+  );
   app.use("/api", accounts(db, sec));
   app.use("/api", social(db, sec, network.online));
   app.use("/api", network.router);
@@ -100,6 +107,15 @@ export async function createApplication(options = {}) {
   app.use("/api", (req, res) =>
     res.status(404).json({ error: "Endpoint not found" }),
   );
+  let vite;
+  if (options.devFrontend) {
+    const { createServer: createViteServer } = await import("vite");
+    vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  }
   app.use(
     express.static(fileURLToPath(new URL("../../dist/", import.meta.url))),
   );
@@ -139,6 +155,7 @@ export async function createApplication(options = {}) {
       return server.address();
     },
     async close() {
+      if (vite) await vite.close();
       await network.close();
       if (server.listening)
         await new Promise((resolve) => server.close(resolve));

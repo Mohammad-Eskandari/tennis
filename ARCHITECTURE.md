@@ -1,52 +1,43 @@
-# Baseline architecture
+# Architecture
 
-## Reference inspection
+## Pool reference
 
-Inspected `Mohammad-Eskandari/pool` at commit `3a53861ae7cf7a8ba06788f3b39cfb9e32285bb3`, cloned into ignored `.reference/pool`. The original remains unchanged.
+Inspected Mohammad-Eskandari/pool at 3a53861ae7cf7a8ba06788f3b39cfb9e32285bb3; the ignored reference checkout is unchanged.
 
-- `frontend/game.js` uses requestAnimationFrame for input, physics, cue animation, camera, widgets and rendering. `camera.js` owns a camera rig independent of cue direction, while `input.js` filters editable targets and cancels gestures on interruption. `workspace.js` separates responsive navigation from the match view.
-- `shared/physics.js` and `shared/rules.js` expose simulation independent of WebGL. Match state has phases, a revision and explicit events. `frontend/match-sync.js` rejects stale and duplicate revisions, including regressions from terminal states.
-- `backend/src/matches.js` checks participation and eligibility, locks matches and users, validates shot parameters, and uses `sim-worker.js` for complete authoritative discrete-shot simulation. Results and ranking changes use transactions and `result_applied` for idempotence.
-- `server.js` authenticates sockets from sessions and handshake CSRF, joins authenticated user and authorized match rooms, bounds messages, and periodically checks sessions. `security.js` uses Argon2id password verification, hashed random session tokens, expiry, secure cookie policy, origin checks and CSRF protection. These are patterns to retain, not evidence that the tennis application already has authentication.
-- `db.js` provides PostgreSQL pools and transactions; `migrate.js` takes an advisory transaction lock and records ordered SQL migrations. Maintenance also supports versioned storage generations and validated backups. These pool-specific schemas must not be copied into tennis unchanged.
-- Root commands cover Vite builds, Node tests, backend bootstrap tests, database setup/migration and integration/browser tests. Development and production are served through Express in the reference. Tennis currently uses Vite directly for its local milestone.
+The native pool app separates rendering/input from shared simulation, uses session/CSRF authentication for HTTP and sockets, validates participants, and applies results with PostgreSQL transactions. Its hosted-app is a separate Sites Worker with D1/R2, polling, PBKDF2 passwords, generational storage and encrypted maintenance.
 
-## Decisions
+Baseline retains vanilla ES modules, Vite, Three.js, Node/Express/PostgreSQL and Socket.IO. Continuous tennis movement/flight/scoring replaces pool shot replay.
 
-Retain vanilla JavaScript ES modules, Three.js and Vite, with Node's built-in test runner. No gameplay library or UI framework is necessary for this milestone. The reference's discrete shot worker and replay stream cannot model continuous tennis; physics, controls, cameras, scoring and AI are new implementations. No reference source or third-party character assets have been copied.
+The Sites core/accounts/social/maintenance modules, schema/migrations and harness are adapted from the user's pool hosted application. Cookies, password policy, profile rating alias, backup format and game validation are adapted for tennis. Compatibility command/event-history tables remain in that platform schema. No pool physics, ball rack or shot-replay game is used.
 
-## Implemented boundaries
+## Gameplay and presentation
 
-| Module                       | Responsibility                                                                                                                                        |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared/config.js`           | Metre-based dimensions, 120 Hz step, surface and AI presets                                                                                           |
-| `shared/physics.js`          | Drag, gravity, tunable vertical Magnus approximation, ballistic shot initialization, swept net-plane tests, bounce events, line and service decisions |
-| `shared/scoring.js`          | Points, deuce, advantage, games, sets, tie-break service rotation and match completion                                                                |
-| `shared/simulation.js`       | Match phase machine, movement, contact eligibility, serve/let/fault handling, scoring integration                                                     |
-| `shared/ai.js`               | Delayed decisions, approximate intercept, recovery, deterministic placement and errors                                                                |
-| `frontend/game/scene.js`     | PBR court and stadium, instanced seats/crowd, lighting, graphics quality, disposal                                                                    |
-| `frontend/game/character.js` | Original procedural humanoids, articulated gait, stroke animation and rackets                                                                         |
-| `frontend/game/camera.js`    | Broadcast default, damped dynamic side tracking/zoom, optional behind-player                                                                          |
-| `frontend/game/input.js`     | Keyboard state, editable-target filtering and focus-loss cleanup                                                                                      |
-| `frontend/game/audio.js`     | Gesture-activated Web Audio impact tones                                                                                                              |
-| `frontend/app.js`            | Local session UI, fixed-step accumulator, render interpolation, HUD, pause, preferences and local statistics                                          |
+shared/config.js centralizes metres, surfaces, AI and 120 Hz timestep. physics.js owns gravity, drag, approximate Magnus force, net sweeps, bounces and boundaries; scoring.js owns real tennis scoring. movement.js provides normalized motion, acceleration, deceleration, sprint and bounds for both authority and prediction. simulation.js owns serve/rally/point/complete phases and accepts two human inputs in online mode. ai.js uses delayed approximate interception and deterministic mistakes.
 
-World `x` spans sidelines, `z` spans baselines and `y` is height. Player zero initially occupies negative z. Broadcast camera sits on the negative-x sideline so positive z moves right on screen. `Input.read(side, horizontalSign)` keeps W/S net-relative. The camera rig projects a short court-width offset at the player to determine visible right, so A/D follow screen left/right in all camera modes and during transitions. Behind-player framing follows the current end. The application reads the player's current side each simulation tick, so a side change does not leave a stale mapping. Input still emits world-space x/z commands; AI and the existing simulation interface remain unchanged. The simulation normalizes diagonal intent before applying speed, acceleration and deceleration. Physics uses the regulation ball radius; its rendered radius is deliberately enlarged for broadcast readability.
+World x spans sidelines, z spans baselines and y is height. W/S follow the current end. The camera projects a small x offset at the player to determine visible right for A/D, including transitions. Behind-player framing follows the player's end.
 
-The renderer interpolates the previous/current fixed simulation positions. Frame time is capped at 100 ms to bound catch-up after stalls. Hidden tabs pause active matches. AI choices use simulation time and a stable per-shot sample rather than wall-clock randomness, enabling reproducible tests.
+frontend/game separates scene, camera, input, procedural animation and audio. frontend/platform separates account/social/admin/lobby UI, API security, prediction and transport. Local movement prediction uses two 120 Hz steps per 60 Hz command. Snapshots acknowledge inputs, replay pending movement and interpolate remote players/ball in a 100 ms buffer.
 
-## Current approximations
+## Native backend
 
-Racket contact uses a 2.15 m assistance region, ball height, opposite last hitter, player half, shot selection and cooldown. Holding a key repeats attempts; charged power and graded early/perfect/late timing are not implemented. Stroke animations are procedural placeholders and do not yet guarantee exact racket-surface contact. Gravity and net sweeps are tested; ground impacts use interpolated contact coordinates and rebound at the end of the step. Spin is a tunable vertical-force approximation, not a full 3-axis aerodynamic model. Net serves that land legally replay as lets; net deflection is simplified.
+backend/src contains config, database, security, accounts, social, admin, multiplayer and results. Development serves Vite middleware, APIs and Socket.IO at one URL; production serves built assets.
 
-Players retain their visible ends to keep controls consistent. Scoring rotates service correctly but physical end changes are not implemented. Practice is an endless unscored session against AI, with player zero serving each new point. Match formats use a seven-point, win-by-two tie-break, including deciding sets. Quick uses three games, two-game margin and tie-break at 3–3; standard uses six and 6–6.
+PostgreSQL migrations use an advisory transaction lock. Passwords use Argon2id; random session tokens are hashed, expiring and carried in HttpOnly SameSite cookies, Secure in production. Origins, CSRF, roles, bounded payloads/uploads and rate limits protect mutations.
 
-## Planned server architecture (not implemented)
+One Node process runs 120 Hz simulation and 20 Hz snapshots. Clients send bounded sequenced inputs, never positions/results. Old input expires after 250 ms; reconnect grace is 30 seconds. Row-locked transactional result processing prevents duplicate wins/rating changes. Native unfinished rooms are abandoned on restart.
 
-Keep Node/Express, PostgreSQL and Socket.IO compatibility. Move this same simulation into long-lived authoritative match workers. Start with 120 Hz simulation and 20–30 Hz snapshots, then measure; do not spawn a worker per stroke. Commands must carry monotonic input sequence and bounded fields, never ball positions or scores. Server acknowledgements enable local movement reconciliation; interpolate remote players/ball behind server time. Add bounded history for contact compensation only after latency tests.
+Native backups use repeatable-read JSON export and parameterized transactional restoration, retaining the active administrator and invalidating sessions. Restore refuses active matches. This is simpler than hosted generation-based recovery.
 
-Adapt the reference's Argon2id sessions, CSRF/socket origins, participant checks, replay protection, reconnect grace and row-locked idempotent result transactions. Create tennis migrations independently. No backend, database, authentication, room lifecycle, ranking, social or administration service is exposed by this milestone. Browser storage is local convenience data, never authoritative ranked data.
+## Sites backend
 
-## Assets and replacement
+.openai/hosting.json declares DB (D1) and BUCKET (R2). scripts/build-hosted.mjs embeds the Vite assets into dist/server/index.js. Root Drizzle schema and migration metadata are included for Sites migration application.
 
-Court, geometry, characters and sound tones are generated in code. Font styling optionally loads DM Sans and Manrope from Google Fonts; system sans-serif fallback works offline. Replace `createPlayer()` with a licensed rigged model behind its current `update(player,time)` interface. Add clip blending and contact-driven racket animation before treating the characters as final assets.
+Workers are request-driven. The hosted adapter coalesces inputs around 20 Hz and advances persisted state with the shared 120 Hz simulation from server elapsed time, capped at 60 catch-up steps. Inputs, acknowledgements, timestamps, ready states and tennis state persist. Optimistic revisions and guarded atomic batches prevent lost updates and duplicate results. Unique seats prevent concurrent rooms for one player. Disconnect expiry runs when requests arrive.
+
+Hosted passwords use salted PBKDF2-SHA256 with 600,000 iterations. Secure sessions, same-origin/CSRF and roles protect APIs. R2 holds private avatars and encrypted backups. AES-GCM backups include versioned records/checksums; restoration stages data and avatar generations, verifies integrity and atomically switches generation.
+
+Sites polling is an adaptation to the same deployment constraints as pool. It is not a persistent Socket.IO process or a measured competitive-latency guarantee. Native PostgreSQL and hosted D1 data/passwords/backups are separate.
+
+## Remaining limits
+
+Contact uses an assisted 2.15 m region; procedural strokes do not ensure exact racket-surface contact. Graded timing, charged power, physical end changes, full animation blending/ambience, touch/gamepads, lag-compensated history, multi-node scaling and performance profiling remain. Browser and cloud playtesting are separate from logic/storage/deployment checks.

@@ -1,0 +1,2 @@
+DROP INDEX `friend_pair`;--> statement-breakpoint
+CREATE UNIQUE INDEX `friend_pair` ON `friendships` (`generation`,CASE WHEN "requester"<"recipient" THEN "requester" ELSE "recipient" END,CASE WHEN "requester">"recipient" THEN "requester" ELSE "recipient" END);
