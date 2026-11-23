@@ -48,6 +48,14 @@ export function administration(db, sec) {
     if (disabled !== undefined && typeof disabled !== "boolean")
       fail(400, "Invalid suspension flag");
     await db.transaction(async (c) => {
+      await c.query("SELECT pg_advisory_xact_lock(827334)");
+      const actor = (
+        await c.query("SELECT role,disabled FROM users WHERE id=$1", [
+          req.user.id,
+        ])
+      ).rows[0];
+      if (actor?.role !== "ADMIN" || actor.disabled)
+        fail(403, "Administrator access required");
       const row = (
         await c.query("SELECT * FROM users WHERE id=$1 FOR UPDATE", [uid])
       ).rows[0];

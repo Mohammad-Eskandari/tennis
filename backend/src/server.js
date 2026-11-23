@@ -10,6 +10,7 @@ import { security } from "./security.js";
 import { accounts } from "./accounts.js";
 import { social } from "./social.js";
 import { administration } from "./admin.js";
+import { multiplayer } from "./multiplayer.js";
 export async function createApplication(options = {}) {
   const config = configuration(options),
     db = await database(config);
@@ -17,6 +18,7 @@ export async function createApplication(options = {}) {
   const sec = security(db, config),
     app = express(),
     server = createServer(app);
+  const network = await multiplayer(server, db, sec, config);
   if (config.trustProxy) app.set("trust proxy", 1);
   app.disable("x-powered-by");
   app.use(
@@ -92,7 +94,8 @@ export async function createApplication(options = {}) {
     res.json({ ok: true });
   });
   app.use("/api", accounts(db, sec));
-  app.use("/api", social(db, sec));
+  app.use("/api", social(db, sec, network.online));
+  app.use("/api", network.router);
   app.use("/api/admin", administration(db, sec));
   app.use("/api", (req, res) =>
     res.status(404).json({ error: "Endpoint not found" }),
@@ -127,6 +130,7 @@ export async function createApplication(options = {}) {
     db,
     sec,
     config,
+    network,
     async listen(port = config.port) {
       await new Promise((resolve, reject) => {
         server.once("error", reject);
@@ -135,6 +139,7 @@ export async function createApplication(options = {}) {
       return server.address();
     },
     async close() {
+      await network.close();
       if (server.listening)
         await new Promise((resolve) => server.close(resolve));
       await db.close();

@@ -1,5 +1,40 @@
 import { api, escapeHtml as esc } from "./api.js";
-export function createClubhouse(openDialog) {
+import { io } from "socket.io-client";
+export function createClubhouse(openDialog, onOnline = () => {}) {
+  let socket = null,
+    room = null,
+    playingRoom = null;
+  function connect() {
+    if (socket?.auth.csrf === user.csrf) {
+      if (!socket.connected) socket.connect();
+      return;
+    }
+    if (socket) {
+      socket.disconnect();
+    }
+    socket = io({ auth: { csrf: user.csrf }, withCredentials: true });
+    socket.on("match:state", (r) => {
+      if (!room || r.id !== room.id) return;
+      room = r;
+      if (r.status === "ACTIVE" && playingRoom !== r.id) {
+        playingRoom = r.id;
+        onOnline(r, user, socket);
+      } else if (page === "online" && document.getElementById("dialog").open)
+        guarded(render);
+    });
+  }
+  function watch(r) {
+    room = r;
+    socket?.emit("match:watch", r.id, (result) => {
+      if (result.room) {
+        room = result.room;
+        if (room.status === "ACTIVE" && playingRoom !== room.id) {
+          playingRoom = room.id;
+          onOnline(room, user, socket);
+        }
+      }
+    });
+  }
   let user = null,
     page = "overview",
     authMode = "login",
@@ -8,7 +43,7 @@ export function createClubhouse(openDialog) {
     adminSearch = "";
   const root = () => document.getElementById("dialog-content");
   const tabs = () =>
-    `<nav class="club-tabs" aria-label="Clubhouse"><button data-page="overview">Overview</button><button data-page="profile">Profile</button><button data-page="social">Friends & messages</button><button data-page="leaderboard">Rankings</button><button data-page="history">History</button>${user?.role === "ADMIN" ? '<button data-page="admin">Administration</button>' : ""}<button data-action="logout">Sign out</button></nav>`;
+    `<nav class="club-tabs" aria-label="Clubhouse"><button data-page="overview">Overview</button><button data-page="online">Play online</button><button data-page="profile">Profile</button><button data-page="social">Friends & messages</button><button data-page="leaderboard">Rankings</button><button data-page="history">History</button>${user?.role === "ADMIN" ? '<button data-page="admin">Administration</button>' : ""}<button data-action="logout">Sign out</button></nav>`;
   const formField = (name, label, value = "", type = "text") =>
     `<label class="club-field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${type === "password" ? 'minlength="12" maxlength="128" autocomplete="current-password"' : 'maxlength="50"'} required></label>`;
   function shell(html) {
@@ -32,6 +67,42 @@ export function createClubhouse(openDialog) {
         `<h2>${authMode === "login" ? "Welcome back." : "Join the club."}</h2><p>Keep your profile and court history with you.</p><form id="club-auth">${formField("username", "Username")}${formField("password", "Password (12–128 characters)", "", "password")}<button class="primary" type="submit">${authMode === "login" ? "Sign in" : "Create account"}</button></form><button class="secondary" data-action="auth-toggle">${authMode === "login" ? "New here? Create an account" : "Already a member? Sign in"}</button>`,
       );
       return;
+    }
+    if (page === "online") {
+      const [d, inv, friends] = await Promise.all([
+        api("/rooms"),
+        api("/invitations"),
+        api("/friends"),
+      ]);
+      if (
+        d.current.length &&
+        (!room || room.status === "COMPLETED" || room.status === "ABANDONED")
+      )
+        watch(d.current[0]);
+      shell(
+        `<h2>Meet at the net.</h2>${
+          room && ["WAITING", "ACTIVE"].includes(room.status)
+            ? `<p>Room <strong>${esc(room.code)}</strong> · ${room.ranked ? "Ranked" : "Casual"} · ${room.names.map((n) => esc(n || "Waiting for player")).join(" vs ")}</p><p>${room.ready.map((ready, i) => `${esc(room.names[i] || "Guest")}: ${ready ? "Ready" : "Not ready"}`).join(" · ")}</p><button class="primary" id="club-ready">Ready to play</button><button class="secondary" id="club-room-leave">Leave room</button><form id="club-invite"><label class="club-field">Invite a friend<select name="userId">${friends.friends
+                .filter((f) => f.status === "ACCEPTED")
+                .map(
+                  (f) =>
+                    `<option value="${f.other_id}">${esc(f.display_name)}</option>`,
+                )
+                .join(
+                  "",
+                )}</select></label><button class="secondary">Send invitation</button></form>`
+            : `<button class="primary" id="club-create-room">Create casual room</button><button class="secondary" id="club-ranked">Find ranked opponent</button><p>Ranked matchmaking pairs players within 300 rating points. Elo K=24; both players must ready.</p><form id="club-join-room">${formField("code", "Room code")}<button class="secondary">Join private room</button></form><h3>Open casual rooms</h3>${
+                d.rooms
+                  .filter((r) => !r.full)
+                  .map(
+                    (r) =>
+                      `<div class="club-person"><span>${esc(r.host)} · ${esc(r.code)}</span><button class="secondary" data-join="${r.code}">Join</button></div>`,
+                  )
+                  .join("") ||
+                "<p>No open rooms. Create one to invite a friend.</p>"
+              }`
+        }<h3>Invitations</h3>${inv.invitations.map((i) => `<div class="club-person"><span>${esc(i.username)} invited you</span><button class="secondary" data-invitation="${i.id}" data-choice="accept">Accept</button><button class="secondary" data-invitation="${i.id}" data-choice="decline">Decline</button></div>`).join("") || "<p>No pending invitations.</p>"}<button class="secondary" data-page="online">Refresh rooms</button>`,
+      );
     }
     if (page === "social") {
       const d = await api("/friends");
@@ -112,6 +183,55 @@ export function createClubhouse(openDialog) {
     }
   }
   function bind() {
+    const create = async (path, body = {}) => {
+      const d = await api(path, { method: "POST", body });
+      watch(d.room);
+      await render();
+    };
+    document
+      .getElementById("club-create-room")
+      ?.addEventListener("click", () => guarded(() => create("/rooms")));
+    document
+      .getElementById("club-ranked")
+      ?.addEventListener("click", () => guarded(() => create("/matchmaking")));
+    document.getElementById("club-ready")?.addEventListener("click", () =>
+      guarded(async () => {
+        const d = await api("/rooms/" + room.id + "/ready", {
+          method: "POST",
+          body: {},
+        });
+        watch(d.room);
+        if (d.room.status === "WAITING") await render();
+      }),
+    );
+    document.getElementById("club-room-leave")?.addEventListener("click", () =>
+      guarded(async () => {
+        await api("/rooms/" + room.id + "/leave", { method: "POST", body: {} });
+        room = null;
+        await render();
+      }),
+    );
+    root()
+      .querySelectorAll("[data-join]")
+      .forEach(
+        (b) =>
+          (b.onclick = () =>
+            guarded(() => create("/rooms/join", { code: b.dataset.join }))),
+      );
+    root()
+      .querySelectorAll("[data-invitation]")
+      .forEach(
+        (b) =>
+          (b.onclick = () =>
+            guarded(async () => {
+              const d = await api("/invitations/" + b.dataset.invitation, {
+                method: "POST",
+                body: { action: b.dataset.choice },
+              });
+              if (d.room) watch(d.room);
+              await render();
+            })),
+      );
     root()
       .querySelectorAll("[data-chat]")
       .forEach(
@@ -215,6 +335,9 @@ export function createClubhouse(openDialog) {
       ?.addEventListener("click", () =>
         guarded(async () => {
           await api("/auth/logout", { method: "POST" });
+          socket?.disconnect();
+          socket = null;
+          room = null;
           user = null;
           render();
         }),
@@ -241,7 +364,20 @@ export function createClubhouse(openDialog) {
         body: Object.fromEntries(f),
       });
       user = d.user;
+      connect();
       page = "overview";
+      await render();
+    });
+    submit("club-join-room", (f) =>
+      create("/rooms/join", {
+        code: String(f.get("code")).trim().toUpperCase(),
+      }),
+    );
+    submit("club-invite", async (f) => {
+      await api("/rooms/" + room.id + "/invite", {
+        method: "POST",
+        body: { userId: f.get("userId") },
+      });
       await render();
     });
     submit("club-search", async (f) => {
@@ -323,6 +459,7 @@ export function createClubhouse(openDialog) {
     );
     await guarded(async () => {
       user = (await api("/auth/me")).user;
+      if (user) connect();
       await render();
     });
   }

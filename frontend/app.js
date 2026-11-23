@@ -1,6 +1,7 @@
 import "./styles.css";
 import { createClubhouse } from "./platform/clubhouse.js";
 import "./platform/styles.css";
+import { OnlineMatch } from "./platform/online-match.js";
 import { createScene } from "./game/scene.js";
 import { CameraRig, CAMERA_MODES } from "./game/camera.js";
 import { Input } from "./game/input.js";
@@ -147,11 +148,23 @@ function pause() {
     return;
   }
   showDialog(
-    '<h2>A moment to reset.</h2><p>Your match is paused. Take a breath, then get back out there.</p><button class="primary" id="resume">Resume match</button><button class="secondary" id="leave">Return to clubhouse</button>',
+    `<h2>A moment to reset.</h2><p>${onlineClient ? "Online play continues while this menu is open. Leaving an active match forfeits it." : "Your match is paused. Take a breath, then get back out there."}</p><button class="primary" id="resume">Resume match</button><button class="secondary" id="leave">Return to clubhouse</button>`,
     "CHANGEOVER",
   );
   $("resume").onclick = closeDialog;
-  $("leave").onclick = () => {
+  $("leave").onclick = async () => {
+    if (onlineClient) {
+      try {
+        await onlineClient.leave();
+        onlineClient = null;
+      } catch (e) {
+        $("dialog-content").insertAdjacentHTML(
+          "beforeend",
+          '<p role="alert">Could not leave the room. Check your connection and retry.</p>',
+        );
+        return;
+      }
+    }
     closeDialog();
     active = false;
     state = createMatch({ mode: "demo", surface: saved.surface });
@@ -270,6 +283,7 @@ const previous = {
   ball: { ...state.ball },
   players: state.players.map((p) => ({ ...p })),
 };
+let onlineClient = null;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
@@ -277,7 +291,17 @@ function frame(now) {
   while (acc >= STEP) {
     Object.assign(previous.ball, state.ball);
     state.players.forEach((p, i) => Object.assign(previous.players[i], p));
-    if (active)
+    if (active && onlineClient)
+      onlineClient.advance(
+        paused
+          ? { x: 0, z: 0, aim: 0, swing: false, sprint: false, shot: "flat" }
+          : input.read(
+              state.players[0].side,
+              rig.horizontalSign(scene.camera, state.players[0]),
+            ),
+        STEP,
+      );
+    else if (active)
       stepMatch(
         state,
         input.read(
@@ -292,13 +316,14 @@ function frame(now) {
     for (const e of state.events) audio.play(e.type);
     acc -= STEP;
   }
+  if (onlineClient) state = onlineClient.sample();
   const alpha = acc / STEP,
     visual = {
       ...state,
       ball: { ...state.ball },
       players: state.players.map((p) => ({ ...p })),
     };
-  if (!paused) {
+  if (!paused && !onlineClient) {
     for (const key of ["x", "y", "z"])
       visual.ball[key] =
         previous.ball[key] + (state.ball[key] - previous.ball[key]) * alpha;
@@ -326,7 +351,23 @@ scene.setSurface(saved.surface || "hard");
 $("surface-label").textContent =
   `${saved.surface[0].toUpperCase()}${saved.surface.slice(1)} court`;
 requestAnimationFrame(frame);
-const clubhouse = createClubhouse(showDialog);
+const clubhouse = createClubhouse(showDialog, (room, user, socket) => {
+  onlineClient?.dispose();
+  onlineClient = new OnlineMatch(room, user, socket);
+  state = onlineClient.sample();
+  active = true;
+  paused = false;
+  recorded = true;
+  input.clear();
+  closeDialog();
+  $("welcome").hidden = true;
+  $("court-caption").hidden = true;
+  $("hud").hidden = false;
+  $("pause").hidden = false;
+  $("match-type").textContent = room.ranked ? "RANKED MATCH" : "ONLINE CASUAL";
+  scene.setSurface(state.surface);
+  audio.activate();
+});
 const clubButton = document.createElement("button");
 clubButton.textContent = "Clubhouse";
 clubButton.onclick = clubhouse.open;

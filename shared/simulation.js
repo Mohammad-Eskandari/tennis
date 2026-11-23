@@ -2,6 +2,7 @@ import { COURT, STEP, clamp } from "./config.js";
 import { newScore, awardPoint, serveCourt } from "./scoring.js";
 import { ballStep, inCourt, validServe, launch } from "./physics.js";
 import { aiInput } from "./ai.js";
+import { movePlayer } from "./movement.js";
 export function createMatch(options = {}) {
   const s = {
     time: 0,
@@ -133,25 +134,14 @@ export function stepMatch(s, input = {}, dt = STEP) {
   }
   for (let i = 0; i < 2; i++) {
     const p = s.players[i],
-      control = i === 1 || s.mode === "demo" ? aiInput(s, i) : input;
+      computer = s.mode === "demo" || (i === 1 && s.mode !== "online"),
+      control =
+        s.mode === "online" ? input[i] || {} : computer ? aiInput(s, i) : input;
     p.swing = Math.max(0, p.swing - dt);
     p.cooldown = Math.max(0, p.cooldown - dt);
-    const n = Math.max(1, Math.hypot(control.x || 0, control.z || 0)),
-      speed = control.speed || (control.sprint ? 7 : 5.3),
-      a = 1 - Math.exp(-16 * dt);
-    p.vx += (((control.x || 0) / n) * speed - p.vx) * a;
-    p.vz += (((control.z || 0) / n) * speed - p.vz) * a;
-    if (s.phase === "rally") {
-      p.x = clamp(p.x + p.vx * dt, -6.6, 6.6);
-      p.z = clamp(
-        p.z + p.vz * dt,
-        p.side < 0 ? -14.5 : 0.6,
-        p.side < 0 ? -0.6 : 14.5,
-      );
-    }
+    movePlayer(p, control, dt, s.phase === "rally");
     if (s.phase === "serve" && s.score.server === i) {
-      if (i === 1 || s.mode === "demo" ? s.timer > 1.1 : control.swing)
-        strike(s, i, control, true);
+      if (computer ? s.timer > 1.1 : control.swing) strike(s, i, control, true);
     } else if (s.phase === "rally" && control.swing && p.cooldown === 0) {
       if (!strike(s, i, control)) {
         p.swing = 0.2;

@@ -56,3 +56,8 @@ Implemented backend/src config, database, security, accounts and server modules;
 
 Added social.js and admin.js APIs; friends/request decisions/removal, accepted-friend messaging, user search/roles/suspension, health counts, audit log, JSON database export and transactional restore. Added working clubhouse screens for these APIs. Seven real-PostgreSQL tests pass, including unauthorized access, friend authorization, suspension/session revocation, and failed/successful restore. Production build passes. Presence currently requires the upcoming socket service; browser QA remains blocked. Backup exports contain password hashes and personal data and must be stored privately. Restore requires RESTORE confirmation, retains the active admin, rejects active matches, and signs out all sessions; it is a single-server maintenance tool.
 
+
+## Milestones D/E: continuous online tennis and competition
+
+Added authenticated Socket.IO room service, ready states, private-code joins, invitations, input sequencing/validation, 120 Hz server simulation and 20 Hz snapshots, 30-second disconnect grace, reconnect watch, forfeits, persisted results, Elo K=24 matchmaking within 300 points, and row-locked idempotent result updates. Frontend adds online lobby, local movement prediction/reconciliation and 100 ms remote interpolation. 46 gameplay/input/client tests and eight PostgreSQL/two-client network integration tests pass; production build passes. Runtime currently targets one Node process and marks unfinished rooms abandoned on restart. No lag-compensated contact history or measured internet-latency tuning yet. Hosted Sites adapter is next.
+
