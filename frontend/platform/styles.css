@@ -1,0 +1,81 @@
+.club-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  height: auto;
+  margin: 18px 0;
+}
+.club-tabs button {
+  height: auto;
+  padding: 8px 10px;
+  border: 1px solid #ffffff25;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #ffffff06;
+  color: #d1dfc9;
+}
+.club-field {
+  display: block;
+  margin: 18px 0;
+  color: #d1dfc9;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.club-field input,
+.club-field textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px 12px;
+  background: #0e2026;
+  color: #edf2e6;
+  border: 1px solid #ffffff30;
+  border-radius: 5px;
+  font: inherit;
+}
+.club-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.club-field input[type="file"] {
+  font-size: 12px;
+}
+.club-error {
+  padding: 12px;
+  background: #a94f4025;
+  border: 1px solid #d0867450;
+  border-radius: 4px;
+  color: #efb9ab;
+  font-size: 14px;
+  margin: 15px 0;
+}
+.club-table {
+  overflow-x: auto;
+}
+.club-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+.club-table th,
+.club-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #ffffff20;
+}
+.club-table th {
+  color: #b9cba5;
+  font-size: 12px;
+}
+.club-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+}
+#dialog:has(.club-tabs) {
+  width: 720px;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}

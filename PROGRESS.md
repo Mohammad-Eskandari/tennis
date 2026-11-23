@@ -47,3 +47,7 @@ Created `package.json`, `package-lock.json`, `.gitignore`, `index.html`, `vite.c
 ## Milestone A: visible horizontal controls
 
 A/D now use the rendered camera projection of the court-width axis; W/S remain net-relative. Behind-player framing follows the controlled player's side. 43 tests and production build pass, including projected on-screen direction at both ends in every camera and through transitions. Browser verification remains blocked by the browser tool connection failure (missing sandboxPolicy); no manual pass is claimed.
+
+## Milestone B: backend foundation
+
+Implemented backend/src config, database, security, accounts and server modules; versioned schema; local PostgreSQL helper; migration/admin commands; account/profile/avatar/password/rankings/history clubhouse UI and Vite API proxy. Five integration tests pass against real PostgreSQL, covering migration idempotence, authentication, session expiry/revocation, CSRF/origin rejection, persistence, duplicates and avatar decoding. Manual browser QA remains unavailable. Social/admin/online match behavior is next.

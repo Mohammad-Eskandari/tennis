@@ -1,4 +1,6 @@
 import "./styles.css";
+import { createClubhouse } from "./platform/clubhouse.js";
+import "./platform/styles.css";
 import { createScene } from "./game/scene.js";
 import { CameraRig, CAMERA_MODES } from "./game/camera.js";
 import { Input } from "./game/input.js";
@@ -324,3 +326,8 @@ scene.setSurface(saved.surface || "hard");
 $("surface-label").textContent =
   `${saved.surface[0].toUpperCase()}${saved.surface.slice(1)} court`;
 requestAnimationFrame(frame);
+const clubhouse = createClubhouse(showDialog);
+const clubButton = document.createElement("button");
+clubButton.textContent = "Clubhouse";
+clubButton.onclick = clubhouse.open;
+document.querySelector("header nav").append(clubButton);

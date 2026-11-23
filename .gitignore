@@ -2,5 +2,8 @@ node_modules/
 dist/
 .reference/
 .env
+.env.*
+!.env.example
+.runtime/
 coverage/
 *.log

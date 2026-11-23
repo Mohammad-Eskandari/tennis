@@ -55,3 +55,17 @@ Quick matches play to three games with a two-game margin and a seven-point tie-b
 Pure shared modules own simulation, AI, court dimensions and tennis scoring. Presentation, keyboard input, procedural characters, camera and audio are separate frontend modules. See [ARCHITECTURE.md](ARCHITECTURE.md) for reference findings and implementation decisions, and [PROGRESS.md](PROGRESS.md) for measured checks and limitations.
 
 No database is required for this milestone. PostgreSQL migrations, Express APIs, authenticated Socket.IO, online rooms, ranked persistence, local two-player and social/admin screens have not been implemented. Do not connect this application to the pool database. The pool reference lives in ignored `.reference/pool` and is unchanged.
+
+## Clubhouse backend (Milestone B)
+
+The Node/Express backend now provides PostgreSQL-backed registration, login/logout, expiring sessions, profiles, validated avatars, account settings, password changes, rankings and match-history queries. Use the Clubhouse navigation to sign in. Match results are populated by later authoritative multiplayer integration; local AI results remain device-local.
+
+On Windows with PostgreSQL 18 installed: run
+pm run db:local to create an isolated cluster on port 55432 and generate ignored local configuration. Other systems: copy .env.example to .env and configure your own PostgreSQL database. Then run
+pm run db:migrate,
+pm run dev:server and
+pm run dev in separate terminals. Run
+pm run test:backend for integration tests against temporary schemas. Run
+pm run admin:grant -- username to promote an existing registered account. Production uses
+pm run build then
+pm start; configure HTTPS and APP_ORIGINS.
