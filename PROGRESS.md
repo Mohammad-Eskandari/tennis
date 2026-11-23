@@ -10,6 +10,8 @@
 | fa34e3c | PostgreSQL/Express accounts and clubhouse                          |
 | 9be3cac | Persistent friends/messages and administration                     |
 | 9cef07f | Authoritative online tennis, prediction, rooms/invitations and Elo |
+| d9e4b15 | Pool-style Worker/D1/R2 platform and encrypted hosted recovery |
+| 0ad0956 | Stable single-URL development startup with Vite |
 
 GitHub main has not been pushed or merged. Master_Prompt.txt remains untouched/untracked.
 
@@ -34,6 +36,12 @@ The provided browser tool fails before connecting (missing sandboxPolicy). No ma
 Procedural/contact animation, graded timing, physical end-change rules, complete ambience, touch/gamepad support, lag compensation and measured internet-latency tuning remain. Native rooms abandon on process restart; hosted simulation progresses on requests with bounded catch-up and request-evaluated disconnect expiry.
 
 Private Site registration/configuration is complete. Creation is not deployment success. Publication status/URL must come from the actual Sites deployment result; browser cloud verification remains separate.
+
+## Publication verification
+
+Sites confirmed a successful private publication at https://baseline-tennis-club.violetscout4.chatgpt.site (deployment appgdep_6b03f82f9b20819191fabfe94b4b5686, runtime environment revision 1). Production Worker error logs showed only missing favicon requests, with no application exceptions in that inspected window. Direct command-line page/health requests returned HTTP 403 before application verification; browser automation remains blocked. Consequently, cloud account/gameplay behavior is not claimed verified. Publication success and local Worker integration results are distinct checks.
+
+Account preferences are now editable and persisted through the profile UI, and hosted presence refreshes during active play. Final source is published as a subsequent version; its actual deployment result is recorded at handoff.
 
 ## Run/check
 

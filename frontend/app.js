@@ -368,6 +368,17 @@ const clubhouse = createClubhouse(showDialog, (room, user, socket) => {
   scene.setSurface(state.surface);
   audio.activate();
 });
+window.addEventListener("baseline:preferences", (event) => {
+  Object.assign(saved, event.detail);
+  audio.enabled = saved.sound !== false;
+  scene.setQuality(saved.quality === "low");
+  if (!active) {
+    scene.setSurface(saved.surface);
+    $("surface-label").textContent =
+      saved.surface[0].toUpperCase() + saved.surface.slice(1) + " court";
+  }
+  save();
+});
 const clubButton = document.createElement("button");
 clubButton.textContent = "Clubhouse";
 clubButton.onclick = clubhouse.open;

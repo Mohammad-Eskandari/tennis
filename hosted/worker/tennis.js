@@ -190,6 +190,20 @@ export async function tennis(c, path, method, b, url) {
   if (!/^\/(rooms|matchmaking|invitations|events)(\/|$)/.test(path))
     return null;
   requireUser(c, "PLAYER");
+  if (path.startsWith("/events")) {
+    const seen = await first(
+      c.db,
+      "SELECT seen FROM presence WHERE generation=? AND user_id=?",
+      [c.g, c.user.id],
+    );
+    if (!seen || seen.seen < Date.now() - 10000)
+      await atomic(c, [
+        [
+          "INSERT INTO presence(generation,user_id,seen) VALUES(?,?,?) ON CONFLICT(generation,user_id) DO UPDATE SET seen=excluded.seen",
+          [c.g, c.user.id, Date.now()],
+        ],
+      ]);
+  }
   if (path === "/events" && method === "GET") {
     await atomic(c, [
       [

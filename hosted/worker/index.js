@@ -82,7 +82,7 @@ async function adapted(c, path, method, b, url) {
           [c.g],
         )
       ).n;
-    return C.json({ ok: true, counts, uptime: 0 });
+    return C.json({ ok: true, counts, uptime: null, hosting: "Sites Worker" });
   }
   if (path === "/admin/audit") {
     C.requireUser(c, "ADMIN");

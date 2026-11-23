@@ -73,6 +73,10 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
     `<nav class="club-tabs" aria-label="Clubhouse"><button data-page="overview">Overview</button><button data-page="online">Play online</button><button data-page="profile">Profile</button><button data-page="social">Friends & messages</button><button data-page="leaderboard">Rankings</button><button data-page="history">History</button>${user?.role === "ADMIN" ? '<button data-page="admin">Administration</button>' : ""}<button data-action="logout">Sign out</button></nav>`;
   const formField = (name, label, value = "", type = "text") =>
     `<label class="club-field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${type === "password" ? 'minlength="12" maxlength="128" autocomplete="current-password"' : 'maxlength="50"'} required></label>`;
+  function preferencesForm() {
+    const s = user.settings || {};
+    return `<form id="club-preferences"><h3>Account preferences</h3><label class="club-field">Sound<select name="sound"><option value="on" ${s.sound !== false ? "selected" : ""}>On</option><option value="off" ${s.sound === false ? "selected" : ""}>Off</option></select></label><label class="club-field">Graphics<select name="quality"><option value="high" ${s.quality !== "low" ? "selected" : ""}>High</option><option value="low" ${s.quality === "low" ? "selected" : ""}>Low</option></select></label><label class="club-field">Court<select name="surface">${["hard", "clay", "grass"].map((v) => `<option value="${v}" ${s.surface === v ? "selected" : ""}>${v}</option>`).join("")}</select></label><button class="secondary">Save account preferences</button></form>`;
+  }
   function shell(html) {
     root().innerHTML = `${user ? tabs() : ""}<div id="club-error" class="club-error" role="alert" hidden></div>${html}`;
     bind();
@@ -147,7 +151,7 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
         api("/admin/audit"),
       ]);
       shell(
-        `<h2>Club administration.</h2><p>${h.counts.users} accounts · ${h.counts.matches} matches · uptime ${h.uptime}s</p><form id="club-admin-search">${formField("q", "Search usernames", adminSearch)}<button class="secondary">Search</button></form>${d.users.map((u) => `<div class="club-person"><span>${esc(u.username)} · ${u.role} · ${u.disabled ? "Suspended" : "Active"} · ${u.rating}</span>${u.id !== user.id ? `<button class="secondary" data-suspend="${u.id}" data-disabled="${!u.disabled}">${u.disabled ? "Reactivate" : "Suspend"}</button><button class="secondary" data-role="${u.id}" data-value="${u.role === "PLAYER" ? "ADMIN" : "PLAYER"}">Make ${u.role === "PLAYER" ? "admin" : "player"}</button>` : ""}</div>`).join("")}<p>Page ${adminPage + 1} · ${d.total} accounts</p><button class="secondary" data-admin-page="${Math.max(0, adminPage - 1)}">Previous page</button><button class="secondary" data-admin-page="${adminPage + 1}">Next page</button>${platformConfig.transport === "sites-poll" ? `<h3>Database management</h3><button class="secondary" id="club-native-backup">Create and download encrypted backup</button><form id="club-native-import"><label class="club-field">Sites backup (.tennis.enc)<input name="backup" type="file" accept=".enc" required></label><button class="secondary">Validate backup</button></form><div id="club-native-preview"></div>` : `<h3>Database management</h3><button class="secondary" id="club-backup">Download database backup</button><form id="club-restore"><label class="club-field">Backup file<input name="backup" type="file" accept="application/json" required></label>${formField("confirm", "Type RESTORE to replace data and sign everyone out")}<button class="secondary">Restore database</button></form>`}<h3>Audit log</h3>${table(
+        `<h2>Club administration.</h2><p>${h.counts.users} accounts · ${h.counts.matches} matches · ${h.uptime === null ? esc(h.hosting) : `uptime ${h.uptime}s`}</p><form id="club-admin-search">${formField("q", "Search usernames", adminSearch)}<button class="secondary">Search</button></form>${d.users.map((u) => `<div class="club-person"><span>${esc(u.username)} · ${u.role} · ${u.disabled ? "Suspended" : "Active"} · ${u.rating}</span>${u.id !== user.id ? `<button class="secondary" data-suspend="${u.id}" data-disabled="${!u.disabled}">${u.disabled ? "Reactivate" : "Suspend"}</button><button class="secondary" data-role="${u.id}" data-value="${u.role === "PLAYER" ? "ADMIN" : "PLAYER"}">Make ${u.role === "PLAYER" ? "admin" : "player"}</button>` : ""}</div>`).join("")}<p>Page ${adminPage + 1} · ${d.total} accounts</p><button class="secondary" data-admin-page="${Math.max(0, adminPage - 1)}">Previous page</button><button class="secondary" data-admin-page="${adminPage + 1}">Next page</button>${platformConfig.transport === "sites-poll" ? `<h3>Database management</h3><button class="secondary" id="club-native-backup">Create and download encrypted backup</button><form id="club-native-import"><label class="club-field">Sites backup (.tennis.enc)<input name="backup" type="file" accept=".enc" required></label><button class="secondary">Validate backup</button></form><div id="club-native-preview"></div>` : `<h3>Database management</h3><button class="secondary" id="club-backup">Download database backup</button><form id="club-restore"><label class="club-field">Backup file<input name="backup" type="file" accept="application/json" required></label>${formField("confirm", "Type RESTORE to replace data and sign everyone out")}<button class="secondary">Restore database</button></form>`}<h3>Audit log</h3>${table(
           audit.events.map((e) => [
             e.action,
             new Date(e.created_at).toLocaleString(),
@@ -163,7 +167,7 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
     }
     if (page === "profile") {
       shell(
-        `<h2>Your player profile.</h2>${user.avatar ? `<img class="club-avatar" alt="Your avatar" src="${esc(user.avatar)}?v=${Date.now()}">` : ""}<form id="club-profile">${formField("displayName", "Display name", user.displayName)}<label class="club-field">Bio<textarea name="bio" maxlength="500">${esc(user.bio)}</textarea></label><button class="primary">Save profile</button></form><form id="club-avatar"><label class="club-field">Avatar (PNG, JPEG or WebP; up to 3 MB)<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" required></label><button class="secondary">Upload avatar</button></form><form id="club-password"><h3>Change password</h3>${formField("currentPassword", "Current password", "", "password")}${formField("newPassword", "New password", "", "password")}<button class="secondary">Update password and sign out</button></form>`,
+        `<h2>Your player profile.</h2>${user.avatar ? `<img class="club-avatar" alt="Your avatar" src="${esc(user.avatar)}?v=${Date.now()}">` : ""}<form id="club-profile">${formField("displayName", "Display name", user.displayName)}<label class="club-field">Bio<textarea name="bio" maxlength="500">${esc(user.bio)}</textarea></label><button class="primary">Save profile</button></form><form id="club-avatar"><label class="club-field">Avatar (PNG, JPEG or WebP; up to 3 MB)<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" required></label><button class="secondary">Upload avatar</button></form>${preferencesForm()}<form id="club-password"><h3>Change password</h3>${formField("currentPassword", "Current password", "", "password")}${formField("newPassword", "New password", "", "password")}<button class="secondary">Update password and sign out</button></form>`,
       );
     }
     if (page === "leaderboard") {
@@ -438,6 +442,21 @@ export function createClubhouse(openDialog, onOnline = () => {}) {
       user = d.user;
       connect();
       page = "overview";
+      await render();
+    });
+    submit("club-preferences", async (f) => {
+      const data = await api("/profile/settings", {
+        method: "PATCH",
+        body: {
+          sound: f.get("sound") === "on",
+          quality: f.get("quality"),
+          surface: f.get("surface"),
+        },
+      });
+      user.settings = data.settings;
+      window.dispatchEvent(
+        new CustomEvent("baseline:preferences", { detail: data.settings }),
+      );
       await render();
     });
     submit("club-join-room", (f) =>
