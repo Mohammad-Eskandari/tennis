@@ -26,10 +26,10 @@ export class Input {
     window.addEventListener("keyup", this.up);
     window.addEventListener("blur", this.clear);
   }
-  read(side = -1) {
+  read(side = -1, horizontalSign = 1) {
     const k = this.keys;
-    // Facing the net: forward and right reverse at the opposite baseline.
-    // Convert human intent to world axes here; camera orientation is irrelevant.
+    // W/S follow the current court end. A/D follow the visible court-width
+    // direction supplied by the camera rig, including during camera transitions.
     const forward =
       Number(k.has("KeyW") || k.has("ArrowUp")) -
       Number(k.has("KeyS") || k.has("ArrowDown"));
@@ -37,7 +37,7 @@ export class Input {
       Number(k.has("KeyD") || k.has("ArrowRight")) -
       Number(k.has("KeyA") || k.has("ArrowLeft"));
     return {
-      x: right * -side || 0,
+      x: right * horizontalSign || 0,
       z: forward * -side || 0,
       sprint: k.has("ShiftLeft") || k.has("ShiftRight"),
       swing: k.has("Space") || k.has("KeyJ") || k.has("KeyK") || k.has("KeyL"),

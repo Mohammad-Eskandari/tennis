@@ -6,17 +6,25 @@ export class CameraRig {
     this.look = new THREE.Vector3();
     this.dest = new THREE.Vector3();
     this.target = new THREE.Vector3();
+    this.probe = new THREE.Vector3();
+    this.offsetProbe = new THREE.Vector3();
   }
   cycle() {
     this.mode = (this.mode + 1) % 3;
     return CAMERA_MODES[this.mode];
+  }
+  horizontalSign(camera, player) {
+    camera.updateMatrixWorld();
+    this.probe.set(player.x, 0, player.z).project(camera);
+    this.offsetProbe.set(player.x + 0.1, 0, player.z).project(camera);
+    return this.offsetProbe.x < this.probe.x ? -1 : 1;
   }
   update(camera, s, dt, menu = false) {
     const b = s.ball,
       aspect = camera.aspect,
       scale = Math.max(1, 1.65 / aspect);
     if (this.mode === 2 && !menu) {
-      this.dest.set(s.players[0].x * 0.5, 8, -23 * scale);
+      this.dest.set(s.players[0].x * 0.5, 8, s.players[0].side * 23 * scale);
       this.target.set(0, 1, 0);
     } else {
       const dynamic = this.mode === 1 && !menu;

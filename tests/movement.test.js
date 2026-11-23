@@ -57,7 +57,7 @@ for (const side of [-1, 1]) {
       for (const code of [key, arrow]) {
         press(code);
         const command = input.read(side);
-        assert.equal(command.x, right * -side || 0);
+        assert.equal(command.x, right);
         assert.equal(command.z, forward * -side || 0);
         const s = rally(side);
         const startZ = s.players[0].z;
@@ -80,7 +80,7 @@ test("a held key follows the current side immediately after changing ends", (t) 
   const { input, press } = keyboard(t);
   press("KeyW", "KeyD");
   assert.deepEqual(input.read(-1), { ...input.read(1), x: 1, z: 1 });
-  assert.equal(input.read(1).x, -1);
+  assert.equal(input.read(1).x, 1);
   assert.equal(input.read(1).z, -1);
 });
 
@@ -113,26 +113,62 @@ test("all four diagonals match cardinal speed at both ends, walking and sprintin
   }
 });
 
-test("all three actual camera modes produce identical movement and gameplay", (t) => {
+test("A/D visibly move left/right and W/S remain net-relative in every camera and end", (t) => {
   const { input, press } = keyboard(t);
   for (const side of [-1, 1]) {
     for (const [key] of directions) {
       input.clear();
       press(key, "ShiftLeft");
-      const results = CAMERA_MODES.map((_, mode) => {
+      CAMERA_MODES.forEach((_, mode) => {
         const s = rally(side);
         const rig = new CameraRig();
         rig.mode = mode;
         const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 200);
-        for (let tick = 0; tick < 60; tick++) {
-          rig.update(camera, s, STEP);
-          stepMatch(s, input.read(s.players[0].side));
-        }
-        return s;
+        camera.position.set(-30, 25, 17);
+        for (let tick = 0; tick < 360; tick++) rig.update(camera, s, STEP);
+        camera.updateMatrixWorld();
+        const start = s.players[0],
+          before = new THREE.Vector3(start.x, 0, start.z).project(camera);
+        const oldDistance = Math.abs(start.z);
+        for (let tick = 0; tick < 30; tick++)
+          stepMatch(
+            s,
+            input.read(side, rig.horizontalSign(camera, s.players[0])),
+          );
+        const p = s.players[0],
+          after = new THREE.Vector3(p.x, 0, p.z).project(camera);
+        if (key === "KeyA")
+          assert.ok(
+            after.x < before.x,
+            `A reversed in ${CAMERA_MODES[mode]} / side ${side}`,
+          );
+        if (key === "KeyD")
+          assert.ok(
+            after.x > before.x,
+            `D reversed in ${CAMERA_MODES[mode]} / side ${side}`,
+          );
+        if (key === "KeyW") assert.ok(Math.abs(p.z) < oldDistance);
+        if (key === "KeyS") assert.ok(Math.abs(p.z) > oldDistance);
       });
-      assert.deepEqual(results[0], results[1]);
-      assert.deepEqual(results[0], results[2]);
     }
+  }
+});
+
+test("horizontal mapping follows the rendered view during camera transitions", (t) => {
+  const { input, press } = keyboard(t);
+  press("KeyD");
+  const rig = new CameraRig(),
+    c = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 200),
+    s = rally(-1);
+  for (const z of [-25, -10, 10, 25]) {
+    c.position.set(-30, 25, z);
+    c.lookAt(0, 0, 0);
+    c.updateMatrixWorld();
+    const p = s.players[0],
+      before = new THREE.Vector3(p.x, 0, p.z).project(c);
+    const cmd = input.read(p.side, rig.horizontalSign(c, p));
+    const after = new THREE.Vector3(p.x + cmd.x * 0.1, 0, p.z).project(c);
+    assert.ok(after.x > before.x);
   }
 });
 

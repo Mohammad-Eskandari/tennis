@@ -43,3 +43,7 @@ Restore browser QA and playtest controls/court framing. Then refine interception
 ## Files
 
 Created `package.json`, `package-lock.json`, `.gitignore`, `index.html`, `vite.config.js`, `frontend/app.js`, `frontend/styles.css`, `frontend/game/{scene,character,camera,input,audio}.js`, `shared/{config,physics,scoring,ai,simulation}.js`, `tests/{physics,rules,gameplay,presentation}.test.js`, `ARCHITECTURE.md`, and `PROGRESS.md`. Updated `README.md`. Preserved the supplied `Master_Prompt.txt`.
+
+## Milestone A: visible horizontal controls
+
+A/D now use the rendered camera projection of the court-width axis; W/S remain net-relative. Behind-player framing follows the controlled player's side. 43 tests and production build pass, including projected on-screen direction at both ends in every camera and through transitions. Browser verification remains blocked by the browser tool connection failure (missing sandboxPolicy); no manual pass is claimed.

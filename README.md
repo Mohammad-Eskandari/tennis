@@ -27,8 +27,8 @@ The build produces `dist/`. The preview command serves the production build loca
 | --------- | ------------------------------------------------- |
 | W / Up    | Forward, toward the net                           |
 | S / Down  | Backward, toward the baseline                     |
-| A / Left  | Strafe left, facing the net                       |
-| D / Right | Strafe right, facing the net                      |
+| A / Left  | Strafe left on screen                             |
+| D / Right | Strafe right on screen                            |
 | Space / J | Flat swing or serve                               |
 | K         | Topspin                                           |
 | L         | Slice                                             |
@@ -37,7 +37,7 @@ The build produces `dist/`. The preview command serves the production build loca
 | C         | Cycle broadcast side, dynamic side, behind-player |
 | Escape    | Pause/resume                                      |
 
-Move close to the incoming ball and hold a stroke key through the contact window. Serves must bounce before returning. Movement is relative to your end of the court, facing the net, in all three camera modes. Directions automatically reverse world axes when your player changes sides, so W still approaches the net. Combine W/S with A/D for diagonal movement; diagonal speed is normalized, including while sprinting. Touch gameplay and gamepads are not implemented.
+Move close to the incoming ball and hold a stroke key through the contact window. Serves must bounce before returning. W/S follow your end of the court, so W always approaches the net. A/D follow visible left/right along the court width in all three cameras, including after switching ends. Combine W/S with A/D for diagonal movement; diagonal speed is normalized, including while sprinting. Touch gameplay and gamepads are not implemented.
 
 ## Modes and settings
 

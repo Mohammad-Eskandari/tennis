@@ -20,7 +20,7 @@ const icons = {
 const icon = (n) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[n]}</svg>`;
 const movementGuide = () =>
-  `<div class="control-list" aria-label="Movement controls"><span><kbd>W / UP</kbd> Forward · toward the net</span><span><kbd>S / DOWN</kbd> Backward · toward the baseline</span><span><kbd>A / LEFT</kbd> Strafe left</span><span><kbd>D / RIGHT</kbd> Strafe right</span></div><p class="muted">Directions follow your position facing the net, in every camera mode and after changing ends. Combine keys to move diagonally. Hold Shift to sprint.</p>`;
+  `<div class="control-list" aria-label="Movement controls"><span><kbd>W / UP</kbd> Forward · toward the net</span><span><kbd>S / DOWN</kbd> Backward · toward the baseline</span><span><kbd>A / LEFT</kbd> Strafe left</span><span><kbd>D / RIGHT</kbd> Strafe right</span></div><p class="muted">W/S follow your end of the court. A/D strafe visibly left/right in the current camera, including after changing ends. Combine keys to move diagonally. Hold Shift to sprint.</p>`;
 document.querySelector("#app").innerHTML = `
  <header><a class="brand" href="./">${icon("ball")}<span>baseline<span class="brand-dot">.</span></span></a><nav aria-label="Main"><button class="nav-active" id="play-nav">The court</button><button id="how-nav">How to play</button><button id="settings-nav">Settings</button></nav><span class="edition">TENNIS, REIMAGINED</span><button class="avatar" id="profile" aria-label="View local player stats">YOU</button></header>
  <main><canvas id="court" aria-label="3D tennis court" tabindex="0"></canvas><div class="vignette"></div>
@@ -275,7 +275,14 @@ function frame(now) {
   while (acc >= STEP) {
     Object.assign(previous.ball, state.ball);
     state.players.forEach((p, i) => Object.assign(previous.players[i], p));
-    if (active) stepMatch(state, input.read(state.players[0].side));
+    if (active)
+      stepMatch(
+        state,
+        input.read(
+          state.players[0].side,
+          rig.horizontalSign(scene.camera, state.players[0]),
+        ),
+      );
     else {
       state.time += STEP;
       state.events = [];
